@@ -1,7 +1,5 @@
 # Spring Test Generator
 
-# Spring-Test-Generator.sh
-
 - Writing Test Cases for Spring hasn't being more fun than ever.
 - **This was created in order to make writing test cases as easy as writing a controller**
 - Simple yet powerful Test Case generator
@@ -27,7 +25,7 @@ This is for the Debian and Ubuntu Repositories, check out the below link for the
 Then you have to create the `tests.json` file in this format:
 
     {
-    	"package": "com.spring.project", //Package Information for the Test Directory
+      "package": "com.spring.project", //Package Information for the Test Directory
       "functions": [
         {
           "fileName": "SimpleController",
@@ -39,7 +37,7 @@ Then you have to create the `tests.json` file in this format:
               "type": "GET",
               "endpoint": "/data",
               "result": "HttpStatus.OK",
-    	        "data": ""
+              "data": ""
             }
           ]
         }
@@ -125,7 +123,7 @@ After creating the json file execute the shell script if your require initial Da
      so try running:
     sudo chmod +x ./spring-Test-Generator.sh
 
-    ./spring-Test-Gen.sh y
+    ./spring-Test-Generator.sh y
 
 Or simply use the script file which does not generate any initial Data
 
@@ -133,9 +131,11 @@ Or simply use the script file which does not generate any initial Data
 
 ## Further Developments
 
----
-
 - Add JSON data from data key properly to the java file
 - Implementing headersData if headers is set to true
 - if replace key is set to false present at the fileName key then below functions will start to add above the previous functions
 - Creating .bat file for windows
+
+# Special Thanks
+
+Special Thanks to stackoverflow user: `@vfalcao` without whom the main component of this script wouldn't have being developed!!
