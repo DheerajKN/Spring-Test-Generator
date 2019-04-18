@@ -25,7 +25,7 @@ This is for the Debian and Ubuntu Repositories, check out the below link for the
 Then you have to create the `tests.json` file in this format:
 
     {
-    	"package": "com.spring.project", //Package Information for the Test Directory
+      "package": "com.spring.project", //Package Information for the Test Directory
       "functions": [
         {
           "fileName": "SimpleController",
