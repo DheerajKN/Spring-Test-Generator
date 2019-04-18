@@ -1,7 +1,5 @@
 # Spring Test Generator
 
-# Spring-Test-Generator.sh
-
 - Writing Test Cases for Spring hasn't being more fun than ever.
 - **This was created in order to make writing test cases as easy as writing a controller**
 - Simple yet powerful Test Case generator
@@ -125,15 +123,13 @@ After creating the json file execute the shell script if your require initial Da
      so try running:
     sudo chmod +x ./spring-Test-Generator.sh
 
-    ./spring-Test-Gen.sh y
+    ./spring-Test-Generator.sh y
 
 Or simply use the script file which does not generate any initial Data
 
     ./spring-Test-Generator.sh
 
 ## Further Developments
-
----
 
 - Add JSON data from data key properly to the java file
 - Implementing headersData if headers is set to true
