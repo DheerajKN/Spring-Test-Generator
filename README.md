@@ -135,3 +135,7 @@ Or simply use the script file which does not generate any initial Data
 - Implementing headersData if headers is set to true
 - if replace key is set to false present at the fileName key then below functions will start to add above the previous functions
 - Creating .bat file for windows
+
+# Special Thanks
+
+Special Thanks to stackoverflow user: `@vfalcao` without whom the main component of this script wouldn't have being developed!!

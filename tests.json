@@ -1,0 +1,62 @@
+{
+  "package": "com.spring.project.controller",
+  "functions": [
+    {
+      "fileName": "SimpleController",
+      "tests": [
+        {
+          "functionName": "getSimpleDatafromSpringControllerTest",
+          "auth": true,
+          "authData": "gmailer@gmail.com;12345",
+          "type": "GET",
+          "data": "",
+          "endpoint": "/data/get/1",
+          "result": "HttpStatus.OK"
+        },
+        {
+          "functionName": "postHeaderDatafromSpringControllerTest",
+          "auth": false,
+          "type": "POST",
+          "data": {
+            "1": 100,
+            "2": "26"
+          },
+          "endpoint": "/data/post",
+          "result": "HttpStatus.OK"
+        }
+      ]
+    },
+    {
+      "fileName": "AnotherSimpleController",
+      "tests": [
+        {
+          "functionName": "putSimpleControllerTest",
+          "auth": true,
+          "authData": "gmailer@gmail.com;12345",
+          "type": "PUT",
+          "headers": true,
+          "headersData": [
+            {
+              "key": "Accept-Language",
+              "value": "en"
+            },
+            {
+              "key": "fetchId",
+              "value": "2"
+            }
+          ],
+          "endpoint": "/data/put",
+          "result": "HttpStatus.OK"
+        },
+        {
+          "functionName": "deleteSimpleControllerTest",
+          "auth": false,
+          "type": "DELETE",
+          "data": "",
+          "endpoint": "/data/delete?id=3",
+          "result": "HttpStatus.OK"
+        }
+      ]
+    }
+  ]
+}
