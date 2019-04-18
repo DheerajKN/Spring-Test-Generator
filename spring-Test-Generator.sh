@@ -16,7 +16,7 @@ package=$(echo "${content}"| jq -r '.package' tests.json)
 import=$(echo "${package}" | rev | cut -d"." -f2-  | rev)
 [ $import = "null" ] && { echo -e "\033[1;31mimport key is missing from json. Exiting..."; exit 1; }
 
-#init Data
+#init Data 
 if [[ $1 == *--initialData* ]]; then
 	echo "package ${package};
 
