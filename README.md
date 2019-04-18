@@ -134,7 +134,7 @@ Or simply use the script file which does not generate any initial Data
 - Add JSON data from data key properly to the java file
 - Implementing headersData if headers is set to true
 - if replace key is set to false present at the fileName key then below functions will start to add above the previous functions
-- Creating .bat file for windows
+- Creating .bat file for Windows so alternatively you can use git bash to execute bash script in Windows
 
 # Special Thanks
 
