@@ -37,7 +37,7 @@ Then you have to create the `tests.json` file in this format:
               "type": "GET",
               "endpoint": "/data",
               "result": "HttpStatus.OK",
-    	        "data": ""
+              "data": ""
             }
           ]
         }
