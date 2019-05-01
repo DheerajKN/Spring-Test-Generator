@@ -133,6 +133,21 @@ public abstract class BaseTest {
     	} 
   }
   
+	  public void executeGetRequest(String url, ContentType contentType, 
+  								ResultMatcher... matchers) throws Exception{
+​
+		MockHttpServletRequestBuilder builder = get(url);
+		executeRequest(builder, contentType, null, matchers);
+	}
+  
+  public void executeGetRequest(String url, String accessToken, ContentType contentType, 
+  		ResultMatcher... matchers) throws Exception{
+​
+		MockHttpServletRequestBuilder builder = get(url);
+		builder.header(\"Authorization\", \"Bearer \" + accessToken);
+		executeRequest(builder, contentType, null, matchers);
+	}
+
   public void executePostRequest(String url, ContentType contentType, 
 									byte[] content, ResultMatcher... matchers) throws Exception{
 		MockHttpServletRequestBuilder builder = post(url);
@@ -147,6 +162,12 @@ public abstract class BaseTest {
 		executeRequest(builder, contentType, content, matchers);  	
 	}
   
+	  public void executePutRequest(String url, ContentType contentType, 
+									byte[] content, ResultMatcher... matchers) throws Exception{
+		MockHttpServletRequestBuilder builder = put(url);
+		executeRequest(builder, contentType, content, matchers);
+	}
+
   public void executePutRequest(String url, String accessToken, ContentType contentType, 
 			byte[] content, ResultMatcher... matchers) throws Exception{
 ​
@@ -154,18 +175,16 @@ public abstract class BaseTest {
 		builder.header(\"Authorization\", \"Bearer \" + accessToken);
 		executeRequest(builder, contentType, content, matchers);  	
 	}
-  
-  public void executeGetRequest(String url, ContentType contentType, 
-  								ResultMatcher... matchers) throws Exception{
-​
-		MockHttpServletRequestBuilder builder = get(url);
+
+		public void executeDeleteRequest(String url, ContentType contentType, 
+			ResultMatcher... matchers) throws Exception {
+		MockHttpServletRequestBuilder builder = delete(url);
 		executeRequest(builder, contentType, null, matchers);
 	}
-  
-  public void executeGetRequest(String url, String accessToken, ContentType contentType, 
-  		ResultMatcher... matchers) throws Exception{
-​
-		MockHttpServletRequestBuilder builder = get(url);
+
+	public void executeDeleteRequest(String url, String accessToken, ContentType contentType, 
+			ResultMatcher... matchers) throws Exception {
+		MockHttpServletRequestBuilder builder = delete(url);
 		builder.header(\"Authorization\", \"Bearer \" + accessToken);
 		executeRequest(builder, contentType, null, matchers);
 	}" >> "${dir}/BaseTest.java"
@@ -185,6 +204,28 @@ public abstract class BaseTest {
 	\tspring.datasource.driverClassName=org.h2.Driver"
 fi
 
+# Line Creator Functions
+function headerLine(){
+echo "		MockHttpServletRequestBuilder builder = $1(\"$2\")$3;
+
+		executeRequest(builder, ContentType.JSON, $4, $5);" 
+} 
+
+function requestAuthWithNoBody(){
+  echo "     		execute$1Request(\"$2\", token, ContentType.JSON, $3);"
+}
+
+function requestWithoutAuthAndBody(){
+  echo "     		execute$1Request(\"$2\", ContentType.JSON, $3);"
+}
+
+function requestAuth(){
+  echo "     		execute$1Request(\"$2\", token, ContentType.JSON, $3, $4);"
+}
+
+function requestWithoutAuth(){
+  echo "     		execute$1Request(\"$2\", ContentType.JSON, $3, $4);"
+}
 
 #Create file and add basic imports along with 
 re=0
@@ -294,56 +335,44 @@ public class ${fileName} extends BaseTest
 		case $type in
 			GET)
 				if $headers; then
-					echo "		MockHttpServletRequestBuilder builder = get(\"${endpoint}\")$headerInfo;
-		
-		executeRequest(builder, ContentType.JSON, null, ${result});" >> "${dir}/${fileName}.java"
-
+					echo "$(headerLine get $endpoint "$headerInfo" null $result)" >> "${dir}/${fileName}.java"
 				elif $auth; then
-					echo "		executeGetRequest(\"${endpoint}\", token, ContentType.JSON, ${result});" >> "${dir}/${fileName}.java"
+					echo "$(requestAuthWithNoBody Get $endpoint $result)" >> "${dir}/${fileName}.java"
 				else
-					echo "		executeGetRequest(\"${endpoint}\", ContentType.JSON, ${result});" >> "${dir}/${fileName}.java"
+					echo "$(requestWithoutAuthAndBody Get $endpoint $result)" >> "${dir}/${fileName}.java"
 				fi
 				;;	
 			POST)	
 				echo "		String data = $newdata;
 							" >> "${dir}/${fileName}.java"
 				if $headers; then
-					echo "		MockHttpServletRequestBuilder builder = post(\"${endpoint}\")$headerInfo;
-		
-		executeRequest(builder, ContentType.JSON, data.getBytes(), ${result});" >> "${dir}/${fileName}.java"
-
+					echo "$(headerLine post $endpoint "$headerInfo" "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
 				elif $auth; then
-echo "     		executePostRequest(\"${endpoint}\", token, ContentType.JSON, data.getBytes(), ${result});" >> "${dir}/${fileName}.java"
+					echo "$(requestAuth Post $endpoint "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
 				else			
-echo "     		executePostRequest(\"${endpoint}\", ContentType.JSON, data.getBytes(), ${result});" >> "${dir}/${fileName}.java"
+					echo "$(requestWithoutAuth Post $endpoint "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
 				fi
 				;;	
 			PUT)	
 				echo "		String data = $newdata;
 							" >> "${dir}/${fileName}.java"
 				if $headers; then
-					echo "		MockHttpServletRequestBuilder builder = put(\"${endpoint}\")$headerInfo;
-		
-		executeRequest(builder, ContentType.JSON, data.getBytes(), ${result});" >> "${dir}/${fileName}.java"
-
-				elif $auth; then				
-echo "     		executePutRequest(\"${endpoint}\", token, ContentType.JSON, data.getBytes(), ${result});" >> "${dir}/${fileName}.java"
-				else						
-echo "     		executePutRequest(\"${endpoint}\", ContentType.JSON, data.getBytes(), ${result});" >> "${dir}/${fileName}.java"
+					echo "$(headerLine put $endpoint "$headerInfo" "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
+				elif $auth; then
+					echo "$(requestAuth Put $endpoint "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
+				else			
+					echo "$(requestWithoutAuth Put $endpoint "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
 				fi
 				;;
 			DELETE)	
 				echo "		String data = $newdata;
 							" >> "${dir}/${fileName}.java"
 				if $headers; then
-					echo "		MockHttpServletRequestBuilder builder = delete(\"${endpoint}\")$headerInfo;
-		
-		executeRequest(builder, ContentType.JSON, data.getBytes(), ${result});" >> "${dir}/${fileName}.java"
-				
+					echo "$(headerLine delete $endpoint "$headerInfo" null $result)" >> "${dir}/${fileName}.java"
 				elif $auth; then
-echo "     		executeDeleteRequest(\"${endpoint}\", token, ContentType.JSON, ${result});">> "${dir}/${fileName}.java"
-				else
-echo "     		executeDeleteRequest(\"${endpoint}\", token, ContentType.JSON, ${result});">> "${dir}/${fileName}.java"
+					echo "$(requestAuthWithNoBody Delete $endpoint $result)" >> "${dir}/${fileName}.java"
+				else			
+					echo "$(requestWithoutAuthAndBody Delete $endpoint $result)" >> "${dir}/${fileName}.java"
 				fi
 				;;
 		esac
