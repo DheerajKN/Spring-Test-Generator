@@ -1,6 +1,6 @@
 # Spring Test Generator
 
-[![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/) [![MIT Licence](https://badges.frapsoft.com/os/mit/mit.svg?v=103)](https://opensource.org/licenses/mit-license.php) [![Bash Shell](https://badges.frapsoft.com/bash/v1/bash.png?v=103)](https://github.com/ellerbrock/open-source-badges/) [![written-in-shell-script](https://img.shields.io/badge/</>-Shell%20Script-<COLOR>.svg)](https://shields.io/) [![current-version](https://img.shields.io/badge/version-1.0.4-blue.svg)](https://shields.io/) [![platform-compactibility](https://img.shields.io/badge/platform-linux%20|%20osx-lightgrey.svg)](https://shields.io/)
+[![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/) [![MIT Licence](https://badges.frapsoft.com/os/mit/mit.svg?v=103)](https://opensource.org/licenses/mit-license.php) [![Bash Shell](https://badges.frapsoft.com/bash/v1/bash.png?v=103)](https://github.com/ellerbrock/open-source-badges/) [![written-in-shell-script](https://img.shields.io/badge/</>-Shell%20Script-<COLOR>.svg)](https://shields.io/) [![current-version](https://img.shields.io/badge/version-1.0.4-blue.svg)](https://shields.io/) [![native-support](https://img.shields.io/badge/native--support-Linux%20%7C%20MacOS-lightgrey.svg)](https://shields.io/)
 
 - Writing Test Cases for Spring hasn't being more fun than ever.
 - **This was created in order to make writing test cases as easy as writing a controller**
@@ -26,6 +26,7 @@ This is for the Debian and Ubuntu Repositories, check out the below link for the
 
 Then you have to create the `tests.json` file in this format:
 
+```javascript
     {
       "package": "com.spring.project", //Package Information for the Test Directory
       "functions": [
@@ -33,20 +34,22 @@ Then you have to create the `tests.json` file in this format:
           "fileName": "SimpleController",
           "tests": [
             {
-              "functionName": "getDatafromSpringControllerTest/2?info=8",
+              "functionName": "getDatafromSpringControllerTest",
               "auth": true,
               "authData": "default",
               "type": "GET",
-              "endpoint": "/data",
+              "endpoint": "/data/2?info=8",
               "result": "HttpStatus.OK",
               "data": ""
             }
           ]
         }
     }
+```
 
 For Post/Put/Delete Requests where we have Data:
 
+```javascript
     {
       "fileName": "PostDataController",
       "tests": [
@@ -65,6 +68,7 @@ For Post/Put/Delete Requests where we have Data:
         }
       ]
     }
+```
 
 If you want to use custom email and password apart from the Application Config file `authData` key is available and make sure that the `auth` key is set to `true` by writing your required `email<;:semi-colon>password` and entering `default` to `authData` key would fetch it from `ApplicationConfig` values.
 
@@ -73,6 +77,7 @@ If you want to use custom email and password apart from the Application Config f
 
 If there is an Endpoint that requires headers:
 
+```javascript
     {
       "fileName": "headerController",
       "tests": [
@@ -88,9 +93,11 @@ If there is an Endpoint that requires headers:
         }
       ]
     }
+```
 
 If in case you have some headers to fill make sure `headers` key is set to `true`
 
+```javascript
     {
           "fileName": "NotificationSettingController",
           "tests": [
@@ -102,11 +109,11 @@ If in case you have some headers to fill make sure `headers` key is set to `true
               "headersData": [
                 {
                   "key": "directory",
-                  "value": "Colostrum"
+                  "value": "MED"
                 },
                 {
                   "key": "fileName",
-                  "value": "Colostrum metabolomics 2018.pdf"
+                  "value": "Medical-2018.pdf"
                 }
               ],
               "endpoint": "/notificationSettingUpdate",
@@ -118,16 +125,9 @@ If in case you have some headers to fill make sure `headers` key is set to `true
             }
           ]
         }
+```
 
-After creating the json file execute the shell script if your require initial Data for setting up Test Cases it is done using
-
-    After pulling the shell file recently adequate permissions are needed,
-     so try running:
-    sudo chmod +x ./spring-Test-Generator.sh
-
-    ./spring-Test-Generator.sh y
-
-Or simply use the script file which does not generate any initial Data
+If your project already has the required initial Data, then simply run:
 
     ./spring-Test-Generator.sh
 
