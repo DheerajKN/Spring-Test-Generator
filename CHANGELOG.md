@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
 - Fetching javaVariable or dbVariable can be done via functions
 - RepoCode now is variablized for better control.
 - Now Folder creation command will be based on flag.
+- Removed import variable, now users have to add package of the main file in test directory.
 
 ## [1.0.0] - 2019-04-18
 

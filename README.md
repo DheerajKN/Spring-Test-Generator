@@ -28,7 +28,7 @@ Then you have to create the `tests.json` file in this format:
 
 ```javascript
     {
-      "package": "com.spring.project", //Package Information for the Test Directory
+      "package": "com.spring.project", //Package data of the Main file inside Test Directory
       "functions": [
         {
           "fileName": "SimpleController",

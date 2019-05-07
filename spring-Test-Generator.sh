@@ -10,11 +10,9 @@ fi
 
 mkdir -p ${dir}
 
-package=$(echo "${content}"| jq -r '.package' tests.json)
-[ $package = "null" ] && { echo -e "\033[1;31mpackage key is missing from json. Exiting..."; exit 1; }
-
-import=$(echo "${package}" | rev | cut -d"." -f2-  | rev)
-[ $import = "null" ] && { echo -e "\033[1;31mimport key is missing from json. Exiting..."; exit 1; }
+package=$(echo "${content}" | jq -r '.package' tests.json)
+[ $package = "null" ] && { echo -e "\033[1;31mpackage key is missing from json. 
+Include the package data of the main file present in project's test directory Exiting..."; exit 1; }
 
 #init Data
 if [[ $1 == *--initialData* ]]; then
@@ -64,7 +62,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.context.WebApplicationContext;
 ​
-import ${import}.ContentType;
+import ${package}.ContentType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 ​
 @RunWith(SpringRunner.class)
@@ -242,9 +240,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.junit.Test;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import ${import}.ApplicationConfig;
-import ${import}.BaseTest;
-import ${import}.ContentType;
+import ${package}.ApplicationConfig;
+import ${package}.BaseTest;
+import ${package}.ContentType;
 
 public class ${fileName} extends BaseTest 
 {
