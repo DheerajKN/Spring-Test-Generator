@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Releases]
 
+## [1.0.7] - 2019-05-21
+
+### Added
+
+- --no-auth flag added that can be used in --initialData that creates initial snippets without OAuth2.
+
 ## [1.0.4] - 2019-05-01
 
 ### Added

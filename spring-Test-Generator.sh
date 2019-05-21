@@ -33,7 +33,7 @@ public class ApplicationConfig
 	public static final String DEFAULT_NAME = \"hbbwd@gmail.com\";
 }" >> "${dir}/ApplicationConfig.java"
 
-	echo "package ${package};
+	baseTest="package ${package};
 ​
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -74,20 +74,23 @@ public abstract class BaseTest {
   @Autowired
   private WebApplicationContext wac;
  
-  @Autowired
-  private FilterChainProxy springSecurityFilterChain;
- 
   protected MockMvc mockMvc;
   
-  @Before
+  public abstract User createAndReturnRandomUserForTesting();
+"
+
+	if [[ ! $* == *--no-auth* ]]; then
+  baseTest+="
+	@Autowired
+  private FilterChainProxy springSecurityFilterChain;
+	
+	@Before
   public void setup() {
     this.mockMvc = MockMvcBuilders.webAppContextSetup(this.wac)
      .addFilter(springSecurityFilterChain).build();
   }
-  
-  public abstract User createAndReturnRandomUserForTesting();
-  
-  protected String obtainAccessToken(String username, String password, String clientId, String secret) throws Exception {
+
+	protected String obtainAccessToken(String username, String password, String clientId, String secret) throws Exception {
 	 		
 		MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
     params.add(\"grant_type\", \"password\");
@@ -109,13 +112,50 @@ public abstract class BaseTest {
     return jsonParser.parseMap(resultString).get(\"access_token\").toString();
   }
   
-  public static byte[] convertObjectToJsonBytes(Object object) throws IOException {
+  public void executeGetRequest(String url, String accessToken, ContentType contentType, 
+  		ResultMatcher... matchers) throws Exception{
+		MockHttpServletRequestBuilder builder = get(url);
+		builder.header(\"Authorization\", \"Bearer \" + accessToken);
+		executeRequest(builder, contentType, null, matchers);
+	}
+
+	  public void executePostRequest(String url, String accessToken, ContentType contentType, 
+			byte[] content, ResultMatcher... matchers) throws Exception{
+​
+		MockHttpServletRequestBuilder builder = post(url);
+		builder.header(\"Authorization\", \"Bearer \" + accessToken);
+		executeRequest(builder, contentType, content, matchers);  	
+	}
+
+	  public void executePutRequest(String url, String accessToken, ContentType contentType, 
+			byte[] content, ResultMatcher... matchers) throws Exception{
+​
+		MockHttpServletRequestBuilder builder = put(url);
+		builder.header(\"Authorization\", \"Bearer \" + accessToken);
+		executeRequest(builder, contentType, content, matchers);  	
+	}
+
+	public void executeDeleteRequest(String url, String accessToken, ContentType contentType, 
+			ResultMatcher... matchers) throws Exception {
+		MockHttpServletRequestBuilder builder = delete(url);
+		builder.header(\"Authorization\", \"Bearer \" + accessToken);
+		executeRequest(builder, contentType, null, matchers);
+	}"
+
+	else 
+	baseTest+="
+	@Before
+  public void setup() {
+    this.mockMvc = MockMvcBuilders.webAppContextSetup(this.wac).build();
+  }"
+fi
+
+	baseTest+="    
+	public static byte[] convertObjectToJsonBytes(Object object) throws IOException {
     ObjectMapper mapper = new ObjectMapper();
     //mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     return mapper.writeValueAsBytes(object);
   }
-  
-  
   
   private void executeRequest(MockHttpServletRequestBuilder builder, ContentType contentType, 
 										byte[] content, ResultMatcher... matchers) throws Exception{
@@ -138,26 +178,11 @@ public abstract class BaseTest {
 		executeRequest(builder, contentType, null, matchers);
 	}
   
-  public void executeGetRequest(String url, String accessToken, ContentType contentType, 
-  		ResultMatcher... matchers) throws Exception{
-​
-		MockHttpServletRequestBuilder builder = get(url);
-		builder.header(\"Authorization\", \"Bearer \" + accessToken);
-		executeRequest(builder, contentType, null, matchers);
-	}
 
   public void executePostRequest(String url, ContentType contentType, 
 									byte[] content, ResultMatcher... matchers) throws Exception{
 		MockHttpServletRequestBuilder builder = post(url);
 		executeRequest(builder, contentType, content, matchers);
-	}
-  
-  public void executePostRequest(String url, String accessToken, ContentType contentType, 
-			byte[] content, ResultMatcher... matchers) throws Exception{
-​
-		MockHttpServletRequestBuilder builder = post(url);
-		builder.header(\"Authorization\", \"Bearer \" + accessToken);
-		executeRequest(builder, contentType, content, matchers);  	
 	}
   
 	  public void executePutRequest(String url, ContentType contentType, 
@@ -166,26 +191,13 @@ public abstract class BaseTest {
 		executeRequest(builder, contentType, content, matchers);
 	}
 
-  public void executePutRequest(String url, String accessToken, ContentType contentType, 
-			byte[] content, ResultMatcher... matchers) throws Exception{
-​
-		MockHttpServletRequestBuilder builder = put(url);
-		builder.header(\"Authorization\", \"Bearer \" + accessToken);
-		executeRequest(builder, contentType, content, matchers);  	
-	}
-
 		public void executeDeleteRequest(String url, ContentType contentType, 
 			ResultMatcher... matchers) throws Exception {
 		MockHttpServletRequestBuilder builder = delete(url);
 		executeRequest(builder, contentType, null, matchers);
-	}
-
-	public void executeDeleteRequest(String url, String accessToken, ContentType contentType, 
-			ResultMatcher... matchers) throws Exception {
-		MockHttpServletRequestBuilder builder = delete(url);
-		builder.header(\"Authorization\", \"Bearer \" + accessToken);
-		executeRequest(builder, contentType, null, matchers);
-	}" >> "${dir}/BaseTest.java"
+	}" 
+	
+	echo "$baseTest" >> "${dir}/BaseTest.java"
 
 	dir="${dir}/controller"
 	mkdir -p ${dir}
