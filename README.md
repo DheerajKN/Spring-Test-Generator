@@ -1,6 +1,6 @@
 # Spring Test Generator
 
-[![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/) [![MIT Licence](https://badges.frapsoft.com/os/mit/mit.svg?v=103)](https://opensource.org/licenses/mit-license.php) [![Bash Shell](https://badges.frapsoft.com/bash/v1/bash.png?v=103)](https://github.com/ellerbrock/open-source-badges/) [![written-in-shell-script](https://img.shields.io/badge/</>-Shell%20Script-<COLOR>.svg)](https://shields.io/) [![current-version](https://img.shields.io/badge/version-1.0.4-blue.svg)](https://shields.io/) [![native-support](https://img.shields.io/badge/native--support-Linux%20%7C%20MacOS-lightgrey.svg)](https://shields.io/)
+[![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/) [![MIT Licence](https://badges.frapsoft.com/os/mit/mit.svg?v=103)](https://opensource.org/licenses/mit-license.php) [![Bash Shell](https://badges.frapsoft.com/bash/v1/bash.png?v=103)](https://github.com/ellerbrock/open-source-badges/) [![written-in-shell-script](https://img.shields.io/badge/</>-Shell%20Script-<COLOR>.svg)](https://shields.io/) [![current-version](https://img.shields.io/badge/version-1.0.7-blue.svg)](https://shields.io/) [![native-support](https://img.shields.io/badge/native--support-Linux%20%7C%20MacOS-lightgrey.svg)](https://shields.io/)
 
 - Writing Test Cases for Spring hasn't being more fun than ever.
 - **This was created in order to make writing test cases as easy as writing a controller**
