@@ -10,11 +10,9 @@ fi
 
 mkdir -p ${dir}
 
-package=$(echo "${content}"| jq -r '.package' tests.json)
-[ $package = "null" ] && { echo -e "\033[1;31mpackage key is missing from json. Exiting..."; exit 1; }
-
-import=$(echo "${package}" | rev | cut -d"." -f2-  | rev)
-[ $import = "null" ] && { echo -e "\033[1;31mimport key is missing from json. Exiting..."; exit 1; }
+package=$(echo "${content}" | jq -r '.package' tests.json)
+[ $package = "null" ] && { echo -e "\033[1;31mpackage key is missing from json. 
+Include the package data of the main file present in project's test directory Exiting..."; exit 1; }
 
 #init Data
 if [[ $1 == *--initialData* ]]; then
@@ -35,7 +33,7 @@ public class ApplicationConfig
 	public static final String DEFAULT_NAME = \"hbbwd@gmail.com\";
 }" >> "${dir}/ApplicationConfig.java"
 
-	echo "package ${package};
+	baseTest="package ${package};
 ​
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -64,7 +62,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.context.WebApplicationContext;
 ​
-import ${import}.ContentType;
+import ${package}.ContentType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 ​
 @RunWith(SpringRunner.class)
@@ -76,20 +74,23 @@ public abstract class BaseTest {
   @Autowired
   private WebApplicationContext wac;
  
-  @Autowired
-  private FilterChainProxy springSecurityFilterChain;
- 
   protected MockMvc mockMvc;
   
-  @Before
+  public abstract User createAndReturnRandomUserForTesting();
+"
+
+	if [[ ! $* == *--no-auth* ]]; then
+  baseTest+="
+	@Autowired
+  private FilterChainProxy springSecurityFilterChain;
+	
+	@Before
   public void setup() {
     this.mockMvc = MockMvcBuilders.webAppContextSetup(this.wac)
      .addFilter(springSecurityFilterChain).build();
   }
-  
-  public abstract User createAndReturnRandomUserForTesting();
-  
-  protected String obtainAccessToken(String username, String password, String clientId, String secret) throws Exception {
+
+	protected String obtainAccessToken(String username, String password, String clientId, String secret) throws Exception {
 	 		
 		MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
     params.add(\"grant_type\", \"password\");
@@ -111,13 +112,50 @@ public abstract class BaseTest {
     return jsonParser.parseMap(resultString).get(\"access_token\").toString();
   }
   
-  public static byte[] convertObjectToJsonBytes(Object object) throws IOException {
+  public void executeGetRequest(String url, String accessToken, ContentType contentType, 
+  		ResultMatcher... matchers) throws Exception{
+		MockHttpServletRequestBuilder builder = get(url);
+		builder.header(\"Authorization\", \"Bearer \" + accessToken);
+		executeRequest(builder, contentType, null, matchers);
+	}
+
+	  public void executePostRequest(String url, String accessToken, ContentType contentType, 
+			byte[] content, ResultMatcher... matchers) throws Exception{
+​
+		MockHttpServletRequestBuilder builder = post(url);
+		builder.header(\"Authorization\", \"Bearer \" + accessToken);
+		executeRequest(builder, contentType, content, matchers);  	
+	}
+
+	  public void executePutRequest(String url, String accessToken, ContentType contentType, 
+			byte[] content, ResultMatcher... matchers) throws Exception{
+​
+		MockHttpServletRequestBuilder builder = put(url);
+		builder.header(\"Authorization\", \"Bearer \" + accessToken);
+		executeRequest(builder, contentType, content, matchers);  	
+	}
+
+	public void executeDeleteRequest(String url, String accessToken, ContentType contentType, 
+			ResultMatcher... matchers) throws Exception {
+		MockHttpServletRequestBuilder builder = delete(url);
+		builder.header(\"Authorization\", \"Bearer \" + accessToken);
+		executeRequest(builder, contentType, null, matchers);
+	}"
+
+	else 
+	baseTest+="
+	@Before
+  public void setup() {
+    this.mockMvc = MockMvcBuilders.webAppContextSetup(this.wac).build();
+  }"
+fi
+
+	baseTest+="    
+	public static byte[] convertObjectToJsonBytes(Object object) throws IOException {
     ObjectMapper mapper = new ObjectMapper();
     //mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     return mapper.writeValueAsBytes(object);
   }
-  
-  
   
   private void executeRequest(MockHttpServletRequestBuilder builder, ContentType contentType, 
 										byte[] content, ResultMatcher... matchers) throws Exception{
@@ -133,42 +171,33 @@ public abstract class BaseTest {
     	} 
   }
   
-  public void executePostRequest(String url, ContentType contentType, 
-									byte[] content, ResultMatcher... matchers) throws Exception{
-		MockHttpServletRequestBuilder builder = post(url);
-		executeRequest(builder, contentType, content, matchers);
-	}
-  
-  public void executePostRequest(String url, String accessToken, ContentType contentType, 
-			byte[] content, ResultMatcher... matchers) throws Exception{
-​
-		MockHttpServletRequestBuilder builder = post(url);
-		builder.header(\"Authorization\", \"Bearer \" + accessToken);
-		executeRequest(builder, contentType, content, matchers);  	
-	}
-  
-  public void executePutRequest(String url, String accessToken, ContentType contentType, 
-			byte[] content, ResultMatcher... matchers) throws Exception{
-​
-		MockHttpServletRequestBuilder builder = put(url);
-		builder.header(\"Authorization\", \"Bearer \" + accessToken);
-		executeRequest(builder, contentType, content, matchers);  	
-	}
-  
-  public void executeGetRequest(String url, ContentType contentType, 
+	  public void executeGetRequest(String url, ContentType contentType, 
   								ResultMatcher... matchers) throws Exception{
 ​
 		MockHttpServletRequestBuilder builder = get(url);
 		executeRequest(builder, contentType, null, matchers);
 	}
   
-  public void executeGetRequest(String url, String accessToken, ContentType contentType, 
-  		ResultMatcher... matchers) throws Exception{
-​
-		MockHttpServletRequestBuilder builder = get(url);
-		builder.header(\"Authorization\", \"Bearer \" + accessToken);
+
+  public void executePostRequest(String url, ContentType contentType, 
+									byte[] content, ResultMatcher... matchers) throws Exception{
+		MockHttpServletRequestBuilder builder = post(url);
+		executeRequest(builder, contentType, content, matchers);
+	}
+  
+	  public void executePutRequest(String url, ContentType contentType, 
+									byte[] content, ResultMatcher... matchers) throws Exception{
+		MockHttpServletRequestBuilder builder = put(url);
+		executeRequest(builder, contentType, content, matchers);
+	}
+
+		public void executeDeleteRequest(String url, ContentType contentType, 
+			ResultMatcher... matchers) throws Exception {
+		MockHttpServletRequestBuilder builder = delete(url);
 		executeRequest(builder, contentType, null, matchers);
-	}" >> "${dir}/BaseTest.java"
+	}" 
+	
+	echo "$baseTest" >> "${dir}/BaseTest.java"
 
 	dir="${dir}/controller"
 	mkdir -p ${dir}
@@ -185,6 +214,28 @@ public abstract class BaseTest {
 	\tspring.datasource.driverClassName=org.h2.Driver"
 fi
 
+# Line Creator Functions
+function headerLine(){
+echo "		MockHttpServletRequestBuilder builder = $1(\"$2\")$3;
+
+		executeRequest(builder, ContentType.JSON, $4, $5);" 
+} 
+
+function requestAuthWithNoBody(){
+  echo "     		execute$1Request(\"$2\", token, ContentType.JSON, $3);"
+}
+
+function requestWithoutAuthAndBody(){
+  echo "     		execute$1Request(\"$2\", ContentType.JSON, $3);"
+}
+
+function requestAuth(){
+  echo "     		execute$1Request(\"$2\", token, ContentType.JSON, $3, $4);"
+}
+
+function requestWithoutAuth(){
+  echo "     		execute$1Request(\"$2\", ContentType.JSON, $3, $4);"
+}
 
 #Create file and add basic imports along with 
 re=0
@@ -201,9 +252,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.junit.Test;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import ${import}.ApplicationConfig;
-import ${import}.BaseTest;
-import ${import}.ContentType;
+import ${package}.ApplicationConfig;
+import ${package}.BaseTest;
+import ${package}.ContentType;
 
 public class ${fileName} extends BaseTest 
 {
@@ -294,56 +345,44 @@ public class ${fileName} extends BaseTest
 		case $type in
 			GET)
 				if $headers; then
-					echo "		MockHttpServletRequestBuilder builder = get(\"${endpoint}\")$headerInfo;
-		
-		executeRequest(builder, ContentType.JSON, null, ${result});" >> "${dir}/${fileName}.java"
-
+					echo "$(headerLine get $endpoint "$headerInfo" null $result)" >> "${dir}/${fileName}.java"
 				elif $auth; then
-					echo "		executeGetRequest(\"${endpoint}\", token, ContentType.JSON, ${result});" >> "${dir}/${fileName}.java"
+					echo "$(requestAuthWithNoBody Get $endpoint $result)" >> "${dir}/${fileName}.java"
 				else
-					echo "		executeGetRequest(\"${endpoint}\", ContentType.JSON, ${result});" >> "${dir}/${fileName}.java"
+					echo "$(requestWithoutAuthAndBody Get $endpoint $result)" >> "${dir}/${fileName}.java"
 				fi
 				;;	
 			POST)	
 				echo "		String data = $newdata;
 							" >> "${dir}/${fileName}.java"
 				if $headers; then
-					echo "		MockHttpServletRequestBuilder builder = post(\"${endpoint}\")$headerInfo;
-		
-		executeRequest(builder, ContentType.JSON, data.getBytes(), ${result});" >> "${dir}/${fileName}.java"
-
+					echo "$(headerLine post $endpoint "$headerInfo" "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
 				elif $auth; then
-echo "     		executePostRequest(\"${endpoint}\", token, ContentType.JSON, data.getBytes(), ${result});" >> "${dir}/${fileName}.java"
+					echo "$(requestAuth Post $endpoint "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
 				else			
-echo "     		executePostRequest(\"${endpoint}\", ContentType.JSON, data.getBytes(), ${result});" >> "${dir}/${fileName}.java"
+					echo "$(requestWithoutAuth Post $endpoint "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
 				fi
 				;;	
 			PUT)	
 				echo "		String data = $newdata;
 							" >> "${dir}/${fileName}.java"
 				if $headers; then
-					echo "		MockHttpServletRequestBuilder builder = put(\"${endpoint}\")$headerInfo;
-		
-		executeRequest(builder, ContentType.JSON, data.getBytes(), ${result});" >> "${dir}/${fileName}.java"
-
-				elif $auth; then				
-echo "     		executePutRequest(\"${endpoint}\", token, ContentType.JSON, data.getBytes(), ${result});" >> "${dir}/${fileName}.java"
-				else						
-echo "     		executePutRequest(\"${endpoint}\", ContentType.JSON, data.getBytes(), ${result});" >> "${dir}/${fileName}.java"
+					echo "$(headerLine put $endpoint "$headerInfo" "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
+				elif $auth; then
+					echo "$(requestAuth Put $endpoint "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
+				else			
+					echo "$(requestWithoutAuth Put $endpoint "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
 				fi
 				;;
 			DELETE)	
 				echo "		String data = $newdata;
 							" >> "${dir}/${fileName}.java"
 				if $headers; then
-					echo "		MockHttpServletRequestBuilder builder = delete(\"${endpoint}\")$headerInfo;
-		
-		executeRequest(builder, ContentType.JSON, data.getBytes(), ${result});" >> "${dir}/${fileName}.java"
-				
+					echo "$(headerLine delete $endpoint "$headerInfo" null $result)" >> "${dir}/${fileName}.java"
 				elif $auth; then
-echo "     		executeDeleteRequest(\"${endpoint}\", token, ContentType.JSON, ${result});">> "${dir}/${fileName}.java"
-				else
-echo "     		executeDeleteRequest(\"${endpoint}\", token, ContentType.JSON, ${result});">> "${dir}/${fileName}.java"
+					echo "$(requestAuthWithNoBody Delete $endpoint $result)" >> "${dir}/${fileName}.java"
+				else			
+					echo "$(requestWithoutAuthAndBody Delete $endpoint $result)" >> "${dir}/${fileName}.java"
 				fi
 				;;
 		esac
