@@ -139,7 +139,8 @@ If your project already has the required initial Data, then simply run:
 
 ## Further Developments
 
-- if replace key is set to false present at the fileName key then below functions will start to add above the previous functions
+- if replace key is set to false present at the fileName key then below functions will start to add above the previous functions.
+- saving generated test java files at the given directory location
 - Creating .bat file for Windows so alternatively you can use git bash to execute bash script in Windows
 
 # Special Thanks

@@ -13,7 +13,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - File information is neccessary and to be passed in first argument.
-- Now user can create test java files from any json file instead of tests.json on same level on the condition that syntax in the json file is in the required way.
+- Now user can create test java files from any json file present in any directory instead of tests.json on same level on the condition that syntax in the json file is in the required way.
 
 ## [1.0.4] - 2019-05-01
 
