@@ -9,13 +9,22 @@ if [ -d "$dir" ]; then
 fi
 
 mkdir -p ${dir}
+if [ -e $1 ]; then
+  if [ ! $1 == *.json ]; then
+    echo -e "\033[1;31mProvided file type $1 is not json. Please Check"
+    exit 1;
+  fi
+  else
+    echo -e "\033[1;31m $1 File doesn't exists. Please Check"
+    exit 1;
+fi
 
-package=$(echo "${content}" | jq -r '.package' tests.json)
+package=$(echo "${content}" | jq -r '.package' $1)
 [ $package = "null" ] && { echo -e "\033[1;31mpackage key is missing from json. 
 Include the package data of the main file present in project's test directory Exiting..."; exit 1; }
 
 #init Data
-if [[ $1 == *--initialData* ]]; then
+if [[ $* == *--initialData* ]]; then
 	echo "package ${package};
 
 public enum ContentType 
@@ -239,7 +248,7 @@ function requestWithoutAuth(){
 
 #Create file and add basic imports along with 
 re=0
-jq -c '.functions[].fileName' tests.json | while read i; do
+jq -c '.functions[].fileName' $1 | while read i; do
     fileName=$(eval echo $i)
 	[ $fileName = "null" ] && { echo -e "\033[1;31mfileName key is missing from json. Exiting..."; exit 1; }
     [[ $fileName == *Test ]] && fileName="$fileName" || fileName="${fileName}Test"
@@ -262,15 +271,15 @@ public class ${fileName} extends BaseTest
 
 	#Start Adding Tests
 	ts=0
-	max_ts=$(jq -r ".functions[${re}].tests | length" tests.json)
-	jq -r ".functions[${re}].tests[${ts}]" tests.json | while [ "$ts" -lt "$max_ts" ]; do
-		functionName=$(jq -r ".functions[${re}].tests[${ts}].functionName" tests.json)
+	max_ts=$(jq -r ".functions[${re}].tests | length" $1)
+	jq -r ".functions[${re}].tests[${ts}]" $1 | while [ "$ts" -lt "$max_ts" ]; do
+		functionName=$(jq -r ".functions[${re}].tests[${ts}].functionName" $1)
 		functionName=$(eval echo $functionName)
 			[ $functionName = "null" ] && { echo -e "\033[1;31mfunctionName key inside ${fileName} -> tests is missing in json. Exiting..."; exit 1; }
 	
-		auth=$(jq -r ".functions[${re}].tests[${ts}].auth // false" tests.json)
+		auth=$(jq -r ".functions[${re}].tests[${ts}].auth // false" $1)
 		if $auth; then
-			authData=$(jq -r ".functions[${re}].tests[${ts}].authData // \"default\"" tests.json)
+			authData=$(jq -r ".functions[${re}].tests[${ts}].authData // \"default\"" $1)
 			if [ $authData == "default" ]; then
 			  authData="ApplicationConfig.DEFAULT_NAME, ApplicationConfig.DEFAULT_PASS"
 			else
@@ -278,19 +287,19 @@ public class ${fileName} extends BaseTest
 			fi			
 		fi
 
-		type=$(jq -r ".functions[${re}].tests[${ts}].type" tests.json)
+		type=$(jq -r ".functions[${re}].tests[${ts}].type" $1)
 		type=$(eval echo $type | tr '[:lower:]' '[:upper:]')
 			[ $type = "null" ] && { echo -e "\033[1;31mtype key inside ${fileName} -> tests is missing in json. Exiting..."; exit 1; }
 
-		endpoint=$(jq -r ".functions[${re}].tests[${ts}].endpoint" tests.json)
+		endpoint=$(jq -r ".functions[${re}].tests[${ts}].endpoint" $1)
 			[ $endpoint = "null" ] && { echo -e "\033[1;31mendpoint key inside ${fileName} -> tests is missing in json. Exiting..."; exit 1; }
 
-		result=$(jq -r ".functions[${re}].tests[${ts}].result" tests.json)
+		result=$(jq -r ".functions[${re}].tests[${ts}].result" $1)
 		result=$(echo $result | cut -d'.' -f2- | sed -r 's/(^|_)([A-Z])/\L\2/g' | sed -E 's/([[:lower:]])|([[:upper:]])/\U\1\L\2/g')
 		result=$(echo "status().is$result()")
 			[ $result = "null" ] && { echo -e "\033[1;31mresult key inside ${fileName} -> tests is missing in json. Exiting..."; exit 1; }
 
-		headers=$(jq -r ".functions[${re}].tests[${ts}].headers // false" tests.json)
+		headers=$(jq -r ".functions[${re}].tests[${ts}].headers // false" $1)
 		enter=$'\n'
 		tab=$'\t\t\t\t'
 
@@ -299,28 +308,28 @@ public class ${fileName} extends BaseTest
 		  	headerInfo=""
 		    headerInfo+="$enter$tab.header(\"Authorization\", \"Bearer \" + token)"
 		    hs=0	
-		    max_hs=$(jq -r ".functions[${re}].tests[${ts}].headersData | length" tests.json)
+		    max_hs=$(jq -r ".functions[${re}].tests[${ts}].headersData | length" $1)
 		    while [ "$hs" -lt "$max_hs" ]; do
-				headerKey=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].key" tests.json)
-				headerValue=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].value" tests.json)
+				headerKey=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].key" $1)
+				headerValue=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].value" $1)
 		    	headerInfo+="$enter$tab.header(\"$headerKey\", \"$headerValue\")"
 			hs=$((hs+1))
-		    done < <(jq -r ".functions[${re}].tests[${ts}].headersData" tests.json)
+		    done < <(jq -r ".functions[${re}].tests[${ts}].headersData" $1)
 		
 		  else
 		    hs=0	
-		    max_hs=$(jq -r ".functions[${re}].tests[${ts}].headersData | length" tests.json)
+		    max_hs=$(jq -r ".functions[${re}].tests[${ts}].headersData | length" $1)
 		    headerInfo=""
 		    while [ "$hs" -lt "$max_hs" ]; do
-				headerKey=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].key" tests.json)
-				headerValue=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].value" tests.json)
+				headerKey=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].key" $1)
+				headerValue=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].value" $1)
 		    	headerInfo+="$enter$tab.header(\"$headerKey\", \"$headerValue\")"
 			hs=$((hs+1))
-		    done < <(jq -r ".functions[${re}].tests[${ts}].headersData" tests.json)
+		    done < <(jq -r ".functions[${re}].tests[${ts}].headersData" $1)
 		  fi
 		fi
 
-		data=$(jq -r ".functions[${re}].tests[${ts}].data" tests.json)
+		data=$(jq -r ".functions[${re}].tests[${ts}].data" $1)
 		if [ ! -z "$data" ] 
 		then
 			#After POST line use echo "String data = $data; | " >>
