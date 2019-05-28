@@ -32,7 +32,7 @@ public enum ContentType
 	JSON,TEXT_PLAIN
 }"  > "${dir}/ContentType.java"
 
-echo "package com.calf.care;
+echo "package ${package};
 
 public class ApplicationConfig 
 {
@@ -257,7 +257,7 @@ jq -c '.functions[].fileName' $1 | while read i; do
 	[ $fileName = "null" ] && { echo -e "\033[1;31mfileName key is missing from json. Exiting..."; exit 1; }
     [[ $fileName == *Test ]] && fileName="$fileName" || fileName="${fileName}Test"
     touch "${dir}/${fileName}.java"
-    echo "package ${package};
+    echo "package ${package}.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
