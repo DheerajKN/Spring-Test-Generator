@@ -156,7 +156,11 @@ public abstract class BaseTest {
 	@Before
   public void setup() {
     this.mockMvc = MockMvcBuilders.webAppContextSetup(this.wac).build();
-  }"
+  }
+	
+	// Custom AccessToken implementation if any, goes here!!
+	//protected String generateJWTToken() {}
+	"
 fi
 
 	baseTest+="    
@@ -312,7 +316,8 @@ public class ${fileName} extends BaseTest
 		    while [ "$hs" -lt "$max_hs" ]; do
 				headerKey=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].key" $1)
 				headerValue=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].value" $1)
-		    	headerInfo+="$enter$tab.header(\"$headerKey\", \"$headerValue\")"
+				[[ $headerValue == *[{}\(]*[\)] ]] && headerValue=$headerValue || headerValue=\"$headerValue\"
+		    	headerInfo+="$enter$tab.header(\"$headerKey\", $headerValue)"
 			hs=$((hs+1))
 		    done < <(jq -r ".functions[${re}].tests[${ts}].headersData" $1)
 		
@@ -323,17 +328,18 @@ public class ${fileName} extends BaseTest
 		    while [ "$hs" -lt "$max_hs" ]; do
 				headerKey=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].key" $1)
 				headerValue=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].value" $1)
-		    	headerInfo+="$enter$tab.header(\"$headerKey\", \"$headerValue\")"
+				[[ $headerValue == *[{}\(]*[\)] ]] && headerValue=$headerValue || headerValue=\"$headerValue\"
+		    	headerInfo+="$enter$tab.header(\"$headerKey\", $headerValue)"
 			hs=$((hs+1))
 		    done < <(jq -r ".functions[${re}].tests[${ts}].headersData" $1)
 		  fi
 		fi
 
-		data=$(jq -r ".functions[${re}].tests[${ts}].data" $1)
+		data=$(jq -r ".functions[${re}].tests[${ts}].data // \"\"" $1)
 		if [ ! -z "$data" ] 
 		then
 			#After POST line use echo "String data = $data; | " >>
-	      		newdata=$(echo $data |\
+			newdata=$(echo $data |\
 				perl -pe 's/{/{\n/; s/}/\n}/; s/, /,\n/g; ' |\
 				perl -0pe 's/"/\\"/g; s/\n/\\n" + \n/g; s/^/"/gm; s/^"/\t\t\t\t"/gm; s/^\t\t\t\t"/"/; s/\}\\n.*$/}"/')
 

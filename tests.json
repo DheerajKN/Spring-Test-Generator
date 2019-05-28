@@ -31,11 +31,13 @@
       "tests": [
         {
           "functionName": "putSimpleControllerTest",
-          "auth": true,
-          "authData": "gmailer@gmail.com;12345",
           "type": "PUT",
           "headers": true,
           "headersData": [
+            {
+              "key": "token",
+              "value": "generateJWTToken(\"email@mail.com\",\"12345678\")"
+            },
             {
               "key": "Accept-Language",
               "value": "en"

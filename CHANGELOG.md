@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - --no-auth flag added that can be used in --initialData that creates initial snippets without OAuth2.
+- Documentation Updated to support --no-auth test case creation
 
 ### Changed
 
