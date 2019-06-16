@@ -10,7 +10,7 @@ fi
 
 mkdir -p ${dir}
 if [ -e $1 ]; then
-  if [ ! $1 == *.json ]; then
+  if [[ ! $1 == *.json ]]; then
     echo -e "\033[1;31mProvided file type $1 is not json. Please Check"
     exit 1;
   fi
