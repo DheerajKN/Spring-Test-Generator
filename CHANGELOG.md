@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Releases]
 
+## [1.1.2] - 2019-08-17
+
+### Added
+
+- Added mock functions for BaseTest file
+- Documentation Updated to support mock test case creation
+- Dependency for mocking using wiremock is added
+- Multipart File upload using multipart as value in `type` json key.
+
+### Changed
+
+- Added more mock functions for mocking endpoints
+- JUnit test function will have more data for the mock part
+
 ## [1.0.7] - 2019-05-21
 
 ### Added

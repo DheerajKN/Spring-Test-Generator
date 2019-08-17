@@ -57,6 +57,43 @@
           "data": "",
           "endpoint": "/data/delete?id=3",
           "result": "HttpStatus.OK"
+        },
+        {
+          "functionName": "multipartSimpleControllerTest",
+          "auth": false,
+          "type": "MULTIPART",
+          "headers": true,
+          "headersData": [
+            {
+              "key": "token",
+              "value": "generateJWTToken(\"email@mail.com\",\"12345678\")"
+            }
+          ],
+          "fileType": "application/pdf",
+          "endpoint": "/data/delete?id=3",
+          "result": "HttpStatus.OK"
+        },
+        {
+          "functionName": "mockSimpleGetRequestTest",
+          "auth": true,
+          "type": "GET",
+          "mockData": {
+            "type": "POST",
+            "uri": "/mock/uri?data=3",
+            "responseJson": {
+              "me": 1
+            },
+            "response": "HttpStatus.OK"
+          },
+          "headers": true,
+          "headersData": [
+            {
+              "key": "token",
+              "value": "generateJWTToken(\"email@mail.com\",\"12345678\")"
+            }
+          ],
+          "endpoint": "/data/delete?id=3",
+          "result": "HttpStatus.OK"
         }
       ]
     }
