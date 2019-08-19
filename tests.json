@@ -80,9 +80,7 @@
           "mockData": {
             "type": "POST",
             "uri": "/mock/uri?data=3",
-            "responseJson": {
-              "me": 1
-            },
+            "responseJson": "",
             "response": "HttpStatus.OK"
           },
           "headers": true,

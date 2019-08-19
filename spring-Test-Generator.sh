@@ -282,24 +282,42 @@ function headerLine() {
 }
 
 function requestAuthWithNoBody() {
-	echo "     		execute$1Request(\"$2\", token, ContentType.JSON, $3);"
+	echo "		execute$1Request(\"$2\", token, ContentType.JSON, $3);"
 }
 
 function requestWithoutAuthAndBody() {
-	echo "     		execute$1Request(\"$2\", ContentType.JSON, $3);"
+	echo "		execute$1Request(\"$2\", ContentType.JSON, $3);"
 }
 
 function requestAuth() {
-	echo "     		execute$1Request(\"$2\", token, ContentType.JSON, $3, $4);"
+	echo "		execute$1Request(\"$2\", token, ContentType.JSON, $3, $4);"
 }
 
 function requestWithoutAuth() {
-	echo "     		execute$1Request(\"$2\", ContentType.JSON, $3, $4);"
+	echo "		execute$1Request(\"$2\", ContentType.JSON, $3, $4);"
 }
 
 function requestOfMock() {
 	echo "wireMockRule.start();	
 		mockRemote$1Service(\"$2\",$3,$4.value());"
+}
+
+function convertBashStringToJavaString() {
+	lines=$1
+	ITER=$(expr ${#lines[@]} - 1)
+	for ((i = 0; i < ${#lines[@]}; i++)); do
+		line=${lines[$i]//\"/\\\"}
+		if [ $i == 0 ]; then
+			local formattedJson="		String $2 = \"${line}\\n\" +
+"
+		elif [ $i == $ITER ]; then
+			formattedJson+="            \"${line}\";"
+		else
+			formattedJson+="            \" ${line}\\n\" +
+"
+		fi
+	done
+	echo "$formattedJson"
 }
 
 #Create file and add basic imports along with
@@ -406,12 +424,10 @@ public class ${fileName} extends BaseTest
 		data=$(jq -r ".functions[${re}].tests[${ts}].data // \"\"" $1)
 		if [ ! -z "$data" ]; then
 			#After POST line use echo "String data = $data; | " >>
-			newdata=$(echo $data |
-				perl -pe 's/{/{\n/; s/}/\n}/; s/, /,\n/g; ' |
-				perl -0pe 's/"/\\"/g; s/\n/\\n" + \n/g; s/^/"/gm; s/^"/\t\t\t\t"/gm; s/^\t\t\t\t"/"/; s/\}\\n.*$/}"/')
-
+			IFS=$'\n' lines=($data)
+			newdata=$(convertBashStringToJavaString ${lines} data)
 		else
-			newdata=\"\"
+			newdata="		String data = \"\";"
 		fi
 
 		echo "	@Test
@@ -441,11 +457,10 @@ public class ${fileName} extends BaseTest
 			responseJson=$(jq -r ".functions[${re}].tests[${ts}].mockData.responseJson // \"\"" $1)
 			if [ ! -z "$responseJson" ]; then
 				#After POST line use echo "String data = $data; | " >>
-				newResponseJson=$(echo $responseJson |
-					perl -pe 's/{/{\n/; s/}/\n}/; s/, /,\n/g; ' |
-					perl -0pe 's/"/\\"/g; s/\n/\\n" + \n/g; s/^/"/gm; s/^"/\t\t\t\t"/gm; s/^\t\t\t\t"/"/; s/\}\\n.*$/}"/')
+				IFS=$'\n' lines=($responseJson)
+				newResponseJson=$(convertBashStringToJavaString ${lines} mockResponseJson)
 
-				echo "		String mockResponseJson = $newResponseJson;
+				echo "$newResponseJson
 		$(requestOfMock $mockType $mockUri "mockResponseJson.getBytes()" $mockResponse)" >>"${dir}/${fileName}.java"
 			else
 				echo "		$(requestOfMock $mockType $mockUri null $mockResponse)" >>"${dir}/${fileName}.java"
@@ -463,7 +478,7 @@ public class ${fileName} extends BaseTest
 			fi
 			;;
 		POST)
-			echo "		String data = $newdata;
+			echo "$newdata
 							" >>"${dir}/${fileName}.java"
 			if $headers; then
 				echo "$(headerLine post $endpoint "$headerInfo" "data.getBytes()" $result)" >>"${dir}/${fileName}.java"
@@ -474,7 +489,7 @@ public class ${fileName} extends BaseTest
 			fi
 			;;
 		PUT)
-			echo "		String data = $newdata;
+			echo "$newdata
 							" >>"${dir}/${fileName}.java"
 			if $headers; then
 				echo "$(headerLine put $endpoint "$headerInfo" "data.getBytes()" $result)" >>"${dir}/${fileName}.java"
@@ -485,7 +500,7 @@ public class ${fileName} extends BaseTest
 			fi
 			;;
 		DELETE)
-			echo "		String data = $newdata;
+			echo "$newdata
 							" >>"${dir}/${fileName}.java"
 			if $headers; then
 				echo "$(headerLine delete $endpoint "$headerInfo" null $result)" >>"${dir}/${fileName}.java"

@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file.
 - Documentation Updated to support mock test case creation
 - Dependency for mocking using wiremock is added
 - Multipart File upload using multipart as value in `type` json key.
+- Minor Formatting updates
+- Changed Json Formatting function that is received from jq once done through perl with bash
 
 ### Changed
 
