@@ -1,29 +1,41 @@
-#!/bin/bash 
+#!/bin/bash
 
 dir=springTests
 
 if [ -d "$dir" ]; then
-  echo -e "\033[1;31mIt seems springTests directory exists in this folder, so we would prefer you to delete it to avoid weird results? y | n"
-  read dirDelResponse
-  if [ $dirDelResponse = "y" ] ; then rm -rf springTests; else exit 1; fi
+	echo -e "\033[1;31mIt seems springTests directory exists in this folder, so we would prefer you to delete it to avoid weird results? y | n"
+	read dirDelResponse
+	if [ $dirDelResponse = "y" ]; then rm -rf springTests; else exit 1; fi
 fi
 
 mkdir -p ${dir}
+if [ -e $1 ]; then
+	if [[ ! $1 == *.json ]]; then
+		echo -e "\033[1;31mProvided file type $1 is not json. Please Check"
+		exit 1
+	fi
+else
+	echo -e "\033[1;31m $1 File doesn't exists. Please Check"
+	exit 1
+fi
 
-package=$(echo "${content}" | jq -r '.package' tests.json)
-[ $package = "null" ] && { echo -e "\033[1;31mpackage key is missing from json. 
-Include the package data of the main file present in project's test directory Exiting..."; exit 1; }
+package=$(echo "${content}" | jq -r '.package' $1)
+[ $package = "null" ] && {
+	echo -e "\033[1;31mpackage key is missing from json. 
+Include the package data of the main file present in project's test directory Exiting..."
+	exit 1
+}
 
 #init Data
-if [[ $1 == *--initialData* ]]; then
+if [[ $* == *--initialData* ]]; then
 	echo "package ${package};
 
 public enum ContentType 
 {
 	JSON,TEXT_PLAIN
-}"  > "${dir}/ContentType.java"
+}" >"${dir}/ContentType.java"
 
-echo "package com.calf.care;
+	echo "package ${package};
 
 public class ApplicationConfig 
 {
@@ -31,26 +43,30 @@ public class ApplicationConfig
 	public static final String OAUTH_CLIENT_SECRET = \"admin123\";
 	public static final String DEFAULT_PASS = \"12345678\";
 	public static final String DEFAULT_NAME = \"hbbwd@gmail.com\";
-}" >> "${dir}/ApplicationConfig.java"
+}" >>"${dir}/ApplicationConfig.java"
 
 	baseTest="package ${package};
-​
+
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-​
+
 import java.io.IOException;
 import java.nio.charset.Charset;
-​
+
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.json.JacksonJsonParser;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.SpringApplication;
 import org.springframework.http.MediaType;
 import org.springframework.security.web.FilterChainProxy;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
@@ -61,26 +77,36 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.context.WebApplicationContext;
-​
+
 import ${package}.ContentType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-​
+import com.github.tomakehurst.wiremock.junit.WireMockClassRule;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+
 @RunWith(SpringRunner.class)
 @WebAppConfiguration
 @SpringBootTest(classes = SpringApplication.class)
 @Ignore
+@ActiveProfiles(\"unittest\")
 public abstract class BaseTest {
-​
+
   @Autowired
   private WebApplicationContext wac;
  
   protected MockMvc mockMvc;
   
-  public abstract User createAndReturnRandomUserForTesting();
+  @ClassRule
+  public static WireMockClassRule wireMockRule = new WireMockClassRule(8089);
+
+  @Rule
+  public WireMockClassRule instanceRule = wireMockRule;
 "
 
 	if [[ ! $* == *--no-auth* ]]; then
-  baseTest+="
+		baseTest+="
 	@Autowired
   private FilterChainProxy springSecurityFilterChain;
 	
@@ -112,24 +138,22 @@ public abstract class BaseTest {
     return jsonParser.parseMap(resultString).get(\"access_token\").toString();
   }
   
-  public void executeGetRequest(String url, String accessToken, ContentType contentType, 
+	public void executeGetRequest(String url, String accessToken, ContentType contentType, 
   		ResultMatcher... matchers) throws Exception{
 		MockHttpServletRequestBuilder builder = get(url);
 		builder.header(\"Authorization\", \"Bearer \" + accessToken);
 		executeRequest(builder, contentType, null, matchers);
 	}
 
-	  public void executePostRequest(String url, String accessToken, ContentType contentType, 
+	public void executePostRequest(String url, String accessToken, ContentType contentType, 
 			byte[] content, ResultMatcher... matchers) throws Exception{
-​
 		MockHttpServletRequestBuilder builder = post(url);
 		builder.header(\"Authorization\", \"Bearer \" + accessToken);
 		executeRequest(builder, contentType, content, matchers);  	
 	}
 
-	  public void executePutRequest(String url, String accessToken, ContentType contentType, 
+	public void executePutRequest(String url, String accessToken, ContentType contentType, 
 			byte[] content, ResultMatcher... matchers) throws Exception{
-​
 		MockHttpServletRequestBuilder builder = put(url);
 		builder.header(\"Authorization\", \"Bearer \" + accessToken);
 		executeRequest(builder, contentType, content, matchers);  	
@@ -142,50 +166,53 @@ public abstract class BaseTest {
 		executeRequest(builder, contentType, null, matchers);
 	}"
 
-	else 
-	baseTest+="
+	else
+		baseTest+="
 	@Before
-  public void setup() {
-    this.mockMvc = MockMvcBuilders.webAppContextSetup(this.wac).build();
-  }"
-fi
+	public void setup() {
+		this.mockMvc = MockMvcBuilders.webAppContextSetup(this.wac).build();
+	}
+	
+	// Custom AccessToken implementation if any, goes here!!
+	//protected String generateJWTToken() {}
+	"
+	fi
 
 	baseTest+="    
 	public static byte[] convertObjectToJsonBytes(Object object) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    //mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-    return mapper.writeValueAsBytes(object);
-  }
+		ObjectMapper mapper = new ObjectMapper();
+		//mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+		return mapper.writeValueAsBytes(object);
+	}
   
-  private void executeRequest(MockHttpServletRequestBuilder builder, ContentType contentType, 
-										byte[] content, ResultMatcher... matchers) throws Exception{
-  		if(contentType == ContentType.JSON){
-  		builder.contentType(new MediaType(MediaType.APPLICATION_JSON.getType(), MediaType.APPLICATION_JSON.getSubtype(), Charset.forName(\"utf8\")));
-  		}
-  		if(content != null){
-  			builder.content(content);
-  		}
-  		ResultActions results = mockMvc.perform(builder);
-    	for(ResultMatcher matcher: matchers){
-    		results.andExpect(matcher);  
-    	} 
-  }
+	private void executeRequest(MockHttpServletRequestBuilder builder, ContentType contentType, 
+			byte[] content, ResultMatcher... matchers) throws Exception{
+		if(contentType == ContentType.JSON){
+			builder.contentType(new MediaType(MediaType.APPLICATION_JSON.getType(), MediaType.APPLICATION_JSON.getSubtype(), Charset.forName("utf8")));
+		}
+		if(content != null){
+			builder.content(content);
+		}
+		ResultActions results = mockMvc.perform(builder);
+		for(ResultMatcher matcher: matchers){
+			results.andExpect(matcher);  
+		} 
+	}
   
-	  public void executeGetRequest(String url, ContentType contentType, 
-  								ResultMatcher... matchers) throws Exception{
-​
+	public void executeGetRequest(String url, ContentType contentType, 
+									ResultMatcher... matchers) throws Exception{
 		MockHttpServletRequestBuilder builder = get(url);
 		executeRequest(builder, contentType, null, matchers);
 	}
   
 
-  public void executePostRequest(String url, ContentType contentType, 
+	public void executePostRequest(String url, ContentType contentType, 
 									byte[] content, ResultMatcher... matchers) throws Exception{
 		MockHttpServletRequestBuilder builder = post(url);
 		executeRequest(builder, contentType, content, matchers);
 	}
   
-	  public void executePutRequest(String url, ContentType contentType, 
+	public void executePutRequest(String url, ContentType contentType, 
 									byte[] content, ResultMatcher... matchers) throws Exception{
 		MockHttpServletRequestBuilder builder = put(url);
 		executeRequest(builder, contentType, content, matchers);
@@ -195,9 +222,42 @@ fi
 			ResultMatcher... matchers) throws Exception {
 		MockHttpServletRequestBuilder builder = delete(url);
 		executeRequest(builder, contentType, null, matchers);
-	}" 
+	}
 	
-	echo "$baseTest" >> "${dir}/BaseTest.java"
+	public void mockRemotePutService(String uri,byte[] bytes,int status) throws IOException
+    {	
+	    stubFor(com.github.tomakehurst.wiremock.client.WireMock.put(urlEqualTo(uri)) 
+	        .willReturn(aResponse()
+	            .withStatus(status)
+	            .withHeader(\"Content-Type\", \"application/json\").withBody(bytes))); 
+	}
+	
+	public void mockRemoteDeleteService(String uri,byte[] bytes,int status) throws IOException
+    {	
+	    stubFor(com.github.tomakehurst.wiremock.client.WireMock.delete(urlEqualTo(uri)) 
+	        .willReturn(aResponse()
+	            .withStatus(status)
+	            .withHeader(\"Content-Type\", \"application/json\").withBody(bytes))); 
+	}
+	
+	public void mockRemoteGetService(String uri,byte[] bytes,int status) throws IOException
+    {	
+	    stubFor(com.github.tomakehurst.wiremock.client.WireMock.get(urlEqualTo(uri)) 
+	        .willReturn(aResponse()
+	            .withStatus(status)
+	            .withHeader(\"Content-Type\", \"application/json\").withBody(bytes))); 
+	}
+	
+	public void mockRemotePostService(String uri,byte[] bytes,int status) throws IOException
+    {	
+	    stubFor(com.github.tomakehurst.wiremock.client.WireMock.post(urlEqualTo(uri)) 
+	        .willReturn(aResponse()
+	            .withStatus(status)
+	            .withHeader(\"Content-Type\", \"application/json\").withBody(bytes))); 
+	}
+}"
+
+	echo "$baseTest" >>"${dir}/BaseTest.java"
 
 	dir="${dir}/controller"
 	mkdir -p ${dir}
@@ -215,41 +275,68 @@ fi
 fi
 
 # Line Creator Functions
-function headerLine(){
-echo "		MockHttpServletRequestBuilder builder = $1(\"$2\")$3;
+function headerLine() {
+	echo "		MockHttpServletRequestBuilder builder = $1(\"$2\")$3;
 
-		executeRequest(builder, ContentType.JSON, $4, $5);" 
-} 
-
-function requestAuthWithNoBody(){
-  echo "     		execute$1Request(\"$2\", token, ContentType.JSON, $3);"
+		executeRequest(builder, ContentType.JSON, $4, $5);"
 }
 
-function requestWithoutAuthAndBody(){
-  echo "     		execute$1Request(\"$2\", ContentType.JSON, $3);"
+function requestAuthWithNoBody() {
+	echo "		execute$1Request(\"$2\", token, ContentType.JSON, $3);"
 }
 
-function requestAuth(){
-  echo "     		execute$1Request(\"$2\", token, ContentType.JSON, $3, $4);"
+function requestWithoutAuthAndBody() {
+	echo "		execute$1Request(\"$2\", ContentType.JSON, $3);"
 }
 
-function requestWithoutAuth(){
-  echo "     		execute$1Request(\"$2\", ContentType.JSON, $3, $4);"
+function requestAuth() {
+	echo "		execute$1Request(\"$2\", token, ContentType.JSON, $3, $4);"
 }
 
-#Create file and add basic imports along with 
+function requestWithoutAuth() {
+	echo "		execute$1Request(\"$2\", ContentType.JSON, $3, $4);"
+}
+
+function requestOfMock() {
+	echo "wireMockRule.start();	
+		mockRemote$1Service(\"$2\",$3,$4.value());"
+}
+
+function convertBashStringToJavaString() {
+	lines=$1
+	ITER=$(expr ${#lines[@]} - 1)
+	for ((i = 0; i < ${#lines[@]}; i++)); do
+		line=${lines[$i]//\"/\\\"}
+		if [ $i == 0 ]; then
+			local formattedJson="		String $2 = \"${line}\\n\" +
+"
+		elif [ $i == $ITER ]; then
+			formattedJson+="            \"${line}\";"
+		else
+			formattedJson+="            \" ${line}\\n\" +
+"
+		fi
+	done
+	echo "$formattedJson"
+}
+
+#Create file and add basic imports along with
 re=0
-jq -c '.functions[].fileName' tests.json | while read i; do
-    fileName=$(eval echo $i)
-	[ $fileName = "null" ] && { echo -e "\033[1;31mfileName key is missing from json. Exiting..."; exit 1; }
-    [[ $fileName == *Test ]] && fileName="$fileName" || fileName="${fileName}Test"
-    touch "${dir}/${fileName}.java"
-    echo "package ${package};
+jq -c '.functions[].fileName' $1 | while read i; do
+	fileName=$(eval echo $i)
+	[ $fileName = "null" ] && {
+		echo -e "\033[1;31mfileName key is missing from json. Exiting..."
+		exit 1
+	}
+	[[ $fileName == *Test ]] && fileName="$fileName" || fileName="${fileName}Test"
+	touch "${dir}/${fileName}.java"
+	echo "package ${package}.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.Test;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import ${package}.ApplicationConfig;
@@ -258,137 +345,192 @@ import ${package}.ContentType;
 
 public class ${fileName} extends BaseTest 
 {
-">> "${dir}/${fileName}.java"	
+" >>"${dir}/${fileName}.java"
 
 	#Start Adding Tests
 	ts=0
-	max_ts=$(jq -r ".functions[${re}].tests | length" tests.json)
-	jq -r ".functions[${re}].tests[${ts}]" tests.json | while [ "$ts" -lt "$max_ts" ]; do
-		functionName=$(jq -r ".functions[${re}].tests[${ts}].functionName" tests.json)
+	max_ts=$(jq -r ".functions[${re}].tests | length" $1)
+	jq -r ".functions[${re}].tests[${ts}]" $1 | while [ "$ts" -lt "$max_ts" ]; do
+		functionName=$(jq -r ".functions[${re}].tests[${ts}].functionName" $1)
 		functionName=$(eval echo $functionName)
-			[ $functionName = "null" ] && { echo -e "\033[1;31mfunctionName key inside ${fileName} -> tests is missing in json. Exiting..."; exit 1; }
-	
-		auth=$(jq -r ".functions[${re}].tests[${ts}].auth // false" tests.json)
+		[ $functionName = "null" ] && {
+			echo -e "\033[1;31mfunctionName key inside ${fileName} -> tests is missing in json. Exiting..."
+			exit 1
+		}
+
+		auth=$(jq -r ".functions[${re}].tests[${ts}].auth // false" $1)
 		if $auth; then
-			authData=$(jq -r ".functions[${re}].tests[${ts}].authData // \"default\"" tests.json)
+			authData=$(jq -r ".functions[${re}].tests[${ts}].authData // \"default\"" $1)
 			if [ $authData == "default" ]; then
-			  authData="ApplicationConfig.DEFAULT_NAME, ApplicationConfig.DEFAULT_PASS"
+				authData="ApplicationConfig.DEFAULT_NAME, ApplicationConfig.DEFAULT_PASS"
 			else
-			  authData=$(echo \"$authData\" | sed -e 's/;/\",\"/g')
-			fi			
+				authData=$(echo \"$authData\" | sed -e 's/;/\",\"/g')
+			fi
 		fi
 
-		type=$(jq -r ".functions[${re}].tests[${ts}].type" tests.json)
+		type=$(jq -r ".functions[${re}].tests[${ts}].type" $1)
 		type=$(eval echo $type | tr '[:lower:]' '[:upper:]')
-			[ $type = "null" ] && { echo -e "\033[1;31mtype key inside ${fileName} -> tests is missing in json. Exiting..."; exit 1; }
+		[ $type = "null" ] && {
+			echo -e "\033[1;31mtype key inside ${fileName} -> tests is missing in json. Exiting..."
+			exit 1
+		}
 
-		endpoint=$(jq -r ".functions[${re}].tests[${ts}].endpoint" tests.json)
-			[ $endpoint = "null" ] && { echo -e "\033[1;31mendpoint key inside ${fileName} -> tests is missing in json. Exiting..."; exit 1; }
+		endpoint=$(jq -r ".functions[${re}].tests[${ts}].endpoint" $1)
+		[ $endpoint = "null" ] && {
+			echo -e "\033[1;31mendpoint key inside ${fileName} -> tests is missing in json. Exiting..."
+			exit 1
+		}
 
-		result=$(jq -r ".functions[${re}].tests[${ts}].result" tests.json)
+		result=$(jq -r ".functions[${re}].tests[${ts}].result" $1)
 		result=$(echo $result | cut -d'.' -f2- | sed -r 's/(^|_)([A-Z])/\L\2/g' | sed -E 's/([[:lower:]])|([[:upper:]])/\U\1\L\2/g')
 		result=$(echo "status().is$result()")
-			[ $result = "null" ] && { echo -e "\033[1;31mresult key inside ${fileName} -> tests is missing in json. Exiting..."; exit 1; }
+		[ $result = "null" ] && {
+			echo -e "\033[1;31mresult key inside ${fileName} -> tests is missing in json. Exiting..."
+			exit 1
+		}
 
-		headers=$(jq -r ".functions[${re}].tests[${ts}].headers // false" tests.json)
+		headers=$(jq -r ".functions[${re}].tests[${ts}].headers // false" $1)
 		enter=$'\n'
 		tab=$'\t\t\t\t'
 
 		if $headers; then
-		  if $auth; then
-		  	headerInfo=""
-		    headerInfo+="$enter$tab.header(\"Authorization\", \"Bearer \" + token)"
-		    hs=0	
-		    max_hs=$(jq -r ".functions[${re}].tests[${ts}].headersData | length" tests.json)
-		    while [ "$hs" -lt "$max_hs" ]; do
-				headerKey=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].key" tests.json)
-				headerValue=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].value" tests.json)
-		    	headerInfo+="$enter$tab.header(\"$headerKey\", \"$headerValue\")"
-			hs=$((hs+1))
-		    done < <(jq -r ".functions[${re}].tests[${ts}].headersData" tests.json)
-		
-		  else
-		    hs=0	
-		    max_hs=$(jq -r ".functions[${re}].tests[${ts}].headersData | length" tests.json)
-		    headerInfo=""
-		    while [ "$hs" -lt "$max_hs" ]; do
-				headerKey=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].key" tests.json)
-				headerValue=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].value" tests.json)
-		    	headerInfo+="$enter$tab.header(\"$headerKey\", \"$headerValue\")"
-			hs=$((hs+1))
-		    done < <(jq -r ".functions[${re}].tests[${ts}].headersData" tests.json)
-		  fi
+			if $auth; then
+				headerInfo=""
+				headerInfo+="$enter$tab.header(\"Authorization\", \"Bearer \" + token)"
+				hs=0
+				max_hs=$(jq -r ".functions[${re}].tests[${ts}].headersData | length" $1)
+				while [ "$hs" -lt "$max_hs" ]; do
+					headerKey=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].key" $1)
+					headerValue=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].value" $1)
+					[[ $headerValue == *[{}\(]*[\)] ]] && headerValue=$headerValue || headerValue=\"$headerValue\"
+					headerInfo+="$enter$tab.header(\"$headerKey\", $headerValue)"
+					hs=$((hs + 1))
+				done < <(jq -r ".functions[${re}].tests[${ts}].headersData" $1)
+
+			else
+				hs=0
+				max_hs=$(jq -r ".functions[${re}].tests[${ts}].headersData | length" $1)
+				headerInfo=""
+				while [ "$hs" -lt "$max_hs" ]; do
+					headerKey=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].key" $1)
+					headerValue=$(jq -r ".functions[${re}].tests[${ts}].headersData[${hs}].value" $1)
+					[[ $headerValue == *[{}\(]*[\)] ]] && headerValue=$headerValue || headerValue=\"$headerValue\"
+					headerInfo+="$enter$tab.header(\"$headerKey\", $headerValue)"
+					hs=$((hs + 1))
+				done < <(jq -r ".functions[${re}].tests[${ts}].headersData" $1)
+			fi
 		fi
 
-		data=$(jq -r ".functions[${re}].tests[${ts}].data" tests.json)
-		if [ ! -z "$data" ] 
-		then
+		data=$(jq -r ".functions[${re}].tests[${ts}].data // \"\"" $1)
+		if [ ! -z "$data" ]; then
 			#After POST line use echo "String data = $data; | " >>
-	      		newdata=$(echo $data |\
-				perl -pe 's/{/{\n/; s/}/\n}/; s/, /,\n/g; ' |\
-				perl -0pe 's/"/\\"/g; s/\n/\\n" + \n/g; s/^/"/gm; s/^"/\t\t\t\t"/gm; s/^\t\t\t\t"/"/; s/\}\\n.*$/}"/')
-
+			IFS=$'\n' lines=($data)
+			newdata=$(convertBashStringToJavaString ${lines} data)
 		else
-			newdata=\"\"
-		fi		
+			newdata="		String data = \"\";"
+		fi
 
 		echo "	@Test
 	public void ${functionName}() throws Exception {
-				" >> "${dir}/${fileName}.java"	
+				" >>"${dir}/${fileName}.java"
 
 		if $auth; then
-		  echo "		String token = obtainAccessToken($authData, 
+			echo "		String token = obtainAccessToken($authData, 
 						ApplicationConfig.OAUTH_CLIENT_ID,ApplicationConfig.OAUTH_CLIENT_SECRET);
-" >> "${dir}/${fileName}.java"
+" >>"${dir}/${fileName}.java"
+		fi
+
+		mockData=$(jq -r ".functions[${re}].tests[${ts}] | has(\"mockData\") // \"\"" $1)
+		if [[ $mockData == "true" ]]; then
+			mockType=$(jq -r ".functions[${re}].tests[${ts}].mockData.type // \"$type\"" $1)
+			mockType=$(echo $mockType | tr '[:upper:]' '[:lower:]' | sed -e "s/\b\(.\)/\u\1/g")
+			mockUri=$(jq -r ".functions[${re}].tests[${ts}].mockData.uri // \"\"" $1)
+			[ $mockUri = "null" ] && {
+				echo -e "\033[1;31muri key inside mockData for ${fileName} -> tests is missing in json. Exiting..."
+				exit 1
+			}
+			mockResponse=$(jq -r ".functions[${re}].tests[${ts}].mockData.response // \"\"" $1)
+			[ $mockResponse = "null" ] && {
+				echo -e "\033[1;31mresponse key inside mockData for ${fileName} -> tests is missing in json. Exiting..."
+				exit 1
+			}
+			responseJson=$(jq -r ".functions[${re}].tests[${ts}].mockData.responseJson // \"\"" $1)
+			if [ ! -z "$responseJson" ]; then
+				#After POST line use echo "String data = $data; | " >>
+				IFS=$'\n' lines=($responseJson)
+				newResponseJson=$(convertBashStringToJavaString ${lines} mockResponseJson)
+
+				echo "$newResponseJson
+		$(requestOfMock $mockType $mockUri "mockResponseJson.getBytes()" $mockResponse)" >>"${dir}/${fileName}.java"
+			else
+				echo "		$(requestOfMock $mockType $mockUri null $mockResponse)" >>"${dir}/${fileName}.java"
+			fi
 		fi
 
 		case $type in
-			GET)
-				if $headers; then
-					echo "$(headerLine get $endpoint "$headerInfo" null $result)" >> "${dir}/${fileName}.java"
-				elif $auth; then
-					echo "$(requestAuthWithNoBody Get $endpoint $result)" >> "${dir}/${fileName}.java"
-				else
-					echo "$(requestWithoutAuthAndBody Get $endpoint $result)" >> "${dir}/${fileName}.java"
-				fi
-				;;	
-			POST)	
-				echo "		String data = $newdata;
-							" >> "${dir}/${fileName}.java"
-				if $headers; then
-					echo "$(headerLine post $endpoint "$headerInfo" "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
-				elif $auth; then
-					echo "$(requestAuth Post $endpoint "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
-				else			
-					echo "$(requestWithoutAuth Post $endpoint "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
-				fi
-				;;	
-			PUT)	
-				echo "		String data = $newdata;
-							" >> "${dir}/${fileName}.java"
-				if $headers; then
-					echo "$(headerLine put $endpoint "$headerInfo" "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
-				elif $auth; then
-					echo "$(requestAuth Put $endpoint "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
-				else			
-					echo "$(requestWithoutAuth Put $endpoint "data.getBytes()" $result)" >> "${dir}/${fileName}.java"
-				fi
-				;;
-			DELETE)	
-				echo "		String data = $newdata;
-							" >> "${dir}/${fileName}.java"
-				if $headers; then
-					echo "$(headerLine delete $endpoint "$headerInfo" null $result)" >> "${dir}/${fileName}.java"
-				elif $auth; then
-					echo "$(requestAuthWithNoBody Delete $endpoint $result)" >> "${dir}/${fileName}.java"
-				else			
-					echo "$(requestWithoutAuthAndBody Delete $endpoint $result)" >> "${dir}/${fileName}.java"
-				fi
-				;;
+		GET)
+			if $headers; then
+				echo "$(headerLine get $endpoint "$headerInfo" null $result)" >>"${dir}/${fileName}.java"
+			elif $auth; then
+				echo "$(requestAuthWithNoBody Get $endpoint $result)" >>"${dir}/${fileName}.java"
+			else
+				echo "$(requestWithoutAuthAndBody Get $endpoint $result)" >>"${dir}/${fileName}.java"
+			fi
+			;;
+		POST)
+			echo "$newdata
+							" >>"${dir}/${fileName}.java"
+			if $headers; then
+				echo "$(headerLine post $endpoint "$headerInfo" "data.getBytes()" $result)" >>"${dir}/${fileName}.java"
+			elif $auth; then
+				echo "$(requestAuth Post $endpoint "data.getBytes()" $result)" >>"${dir}/${fileName}.java"
+			else
+				echo "$(requestWithoutAuth Post $endpoint "data.getBytes()" $result)" >>"${dir}/${fileName}.java"
+			fi
+			;;
+		PUT)
+			echo "$newdata
+							" >>"${dir}/${fileName}.java"
+			if $headers; then
+				echo "$(headerLine put $endpoint "$headerInfo" "data.getBytes()" $result)" >>"${dir}/${fileName}.java"
+			elif $auth; then
+				echo "$(requestAuth Put $endpoint "data.getBytes()" $result)" >>"${dir}/${fileName}.java"
+			else
+				echo "$(requestWithoutAuth Put $endpoint "data.getBytes()" $result)" >>"${dir}/${fileName}.java"
+			fi
+			;;
+		DELETE)
+			echo "$newdata
+							" >>"${dir}/${fileName}.java"
+			if $headers; then
+				echo "$(headerLine delete $endpoint "$headerInfo" null $result)" >>"${dir}/${fileName}.java"
+			elif $auth; then
+				echo "$(requestAuthWithNoBody Delete $endpoint $result)" >>"${dir}/${fileName}.java"
+			else
+				echo "$(requestWithoutAuthAndBody Delete $endpoint $result)" >>"${dir}/${fileName}.java"
+			fi
+			;;
+		MULTIPART)
+			fileType=$(jq -r ".functions[${re}].tests[${ts}].fileType // \"\"" $1)
+			[ $fileType = "null" ] && {
+				echo -e "\033[1;31mfileType key inside ${fileName} -> tests is missing in json for multipart Request. Exiting..."
+				exit 1
+			}
+			functionValue="		String fileName = \"sampleDocument.${fileType#*/}\";
+					MockMultipartFile multipartFile =
+							new MockMultipartFile(\"zeissDocument\", fileName, \"$fileType\", \"Some bytes\".getBytes());
+					mockMvc.perform(multipart(\"$endpoint\").file(multipartFile)"
+			if $headers; then
+				functionValue+=$headerInfo
+			fi
+			functionValue+=")
+					.andExpect($result);"
+			echo "$functionValue" >>"${dir}/${fileName}.java"
+			;;
 		esac
-	echo "	}" >> "${dir}/${fileName}.java"
-	ts=$((ts+1))
-	done	
-echo "}" >> "${dir}/${fileName}.java"
-re=$((re+1))
+		echo "	}" >>"${dir}/${fileName}.java"
+		ts=$((ts + 1))
+	done
+	echo "}" >>"${dir}/${fileName}.java"
+	re=$((re + 1))
 done
